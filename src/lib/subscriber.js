@@ -1,18 +1,15 @@
 'use strict'
 
 const request = require('co-request')
+const WebSocket = require('ws')
 
 function Subscriber (log, config) {
-  this.notificationUri = config.server.base_uri + '/notifications'
   this.log = log('subscriber')
   this.config = config
+  this.ready = false
 }
 
-// By using a single constant UUID we avoid duplicate subscriptions
-// TODO Obviously that is a hack and will need to change eventually
-const notificationUuid = '94f65a56-242c-4d9e-b2cb-d878c52fc3cc'
-
-Subscriber.prototype.subscribe = function * () {
+Subscriber.prototype.subscribe = function * (emitter) {
   if (!Array.isArray(this.config.receiver.credentials)) {
     throw new Error('Invalid RECEIVER_CREDENTIALS')
   }
@@ -25,11 +22,11 @@ Subscriber.prototype.subscribe = function * () {
     if (typeof credential.password !== 'string') {
       throw new Error('Missing password in credential')
     }
-    yield this.subscribeAccount(credential)
+    yield this.subscribeAccount(credential, emitter)
   }
 }
 
-Subscriber.prototype.subscribeAccount = function * (credential) {
+Subscriber.prototype.subscribeAccount = function * (credential, emitter) {
   this.log.info('subscribing to ' + credential.account)
 
   try {
@@ -42,27 +39,29 @@ Subscriber.prototype.subscribeAccount = function * (credential) {
         credential.account + ': ' + getAccountRes.statusCode)
     }
     const username = getAccountRes.body.name
-    const ledger = getAccountRes.body.ledger
-    const putSubscriptionRes = yield request.put({
-      url: ledger + '/subscriptions/' + notificationUuid,
-      json: true,
-      auth: {
-        username: username,
-        password: credential.password
-      },
-      body: {
-        owner: credential.account,
-        event: '*',
-        subject: credential.account,
-        target: this.notificationUri
-      }
+    const header = username + ':' + (credential.password || '')
+    const authHeader = { Authorization: 'Basic ' + new Buffer(header).toString('base64') }
+
+    // Establishing websocket connection
+    const wsURI = credential.account.replace(/^http/, 'ws') + '/transfers'
+    const ws = new WebSocket(wsURI, { headers: authHeader })
+    ws.on('open', () => {
+      this.ready = true
+      this.log.info('connected to ' + wsURI)
     })
-    if (putSubscriptionRes.statusCode >= 400) {
-      throw new Error('Unexpected status code ' + putSubscriptionRes.statusCode)
-    }
+    ws.on('close', () => {
+      this.ready = false
+      this.log.info('disconnected from ' + wsURI)
+    })
+    ws.on('message', (message) => emitter.emit('notification', message))
   } catch (err) {
     this.log.warn('could not subscribe to ' + credential.account)
+    this.log.warn(err.stack)
   }
+}
+
+Subscriber.prototype.getHealth = function * () {
+  return this.ready
 }
 
 module.exports = Subscriber
