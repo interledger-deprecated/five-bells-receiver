@@ -11,14 +11,13 @@ class Receiver {
   }
 
   maybeFulfillCondition (transfer) {
+    console.log(JSON.stringify(transfer))
     if (transfer.state === 'prepared' &&
         transfer.credits[0].memo &&
         transfer.credits[0].memo.receiverId) {
       const receiverId = transfer.credits[0].memo.receiverId
       const condition = this.getCondition(receiverId)
       const conditionUri = condition.getConditionUri()
-
-      console.log(JSON.stringify(transfer))
 
       // This will be true for the last transfer in the chain - which is the one
       // we need to fulfill.
