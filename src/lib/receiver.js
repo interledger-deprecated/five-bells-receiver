@@ -14,8 +14,10 @@ class Receiver {
     console.log(JSON.stringify(transfer))
     if (transfer.state === 'prepared' &&
         transfer.credits[0].memo &&
-        transfer.credits[0].memo.receiverId) {
-      const receiverId = transfer.credits[0].memo.receiverId
+        transfer.credits[0].memo.ilp_header &&
+        transfer.credits[0].memo.ilp_header.data &&
+        transfer.credits[0].memo.ilp_header.data.receiverId) {
+      const receiverId = transfer.credits[0].memo.ilp_header.data.receiverId
       const condition = this.getCondition(receiverId)
       const conditionUri = condition.getConditionUri()
 
