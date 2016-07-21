@@ -1,6 +1,6 @@
 {
   "name": "five-bells-receiver",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Dummy recipient implementation for testing.",
   "main": "app.js",
   "scripts": {
