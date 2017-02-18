@@ -32,7 +32,7 @@
     "co": "^4.6.0",
     "co-emitter": "^0.2.3",
     "co-request": "^1.0.0",
-    "five-bells-condition": "^4.0.0",
+    "five-bells-condition": "^5.0.1",
     "five-bells-shared": "^21.1.0",
     "koa": "^1.2.0",
     "koa-bodyparser": "^2.0.1",
